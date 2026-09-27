@@ -1,0 +1,312 @@
+{
+  "schemaVersion": 2,
+  "subjects": [
+    {
+      "id": "marine-ecology",
+      "name": "Marine Ecology",
+      "stacks": [
+        {
+          "id": "coastal-habitats",
+          "name": "Coastal Habitats",
+          "cards": [
+            {
+              "id": "coast-foundation",
+              "type": "standard",
+              "front": "What is a foundation species?",
+              "back": "A species that creates or strongly structures habitat for other organisms, such as kelp in a kelp forest.",
+              "reverse": false,
+              "frontImage": "",
+              "backImage": "",
+              "links": [{"label": "Foundation species overview", "url": "https://en.wikipedia.org/wiki/Foundation_species"}],
+              "reviews": []
+            },
+            {
+              "id": "coast-seagrass",
+              "type": "pearl",
+              "front": "Unlike seaweeds, seagrasses are marine {{flowering plants}}.",
+              "back": "Seagrasses have roots, rhizomes and leaves, and reproduce using flowers and seeds.",
+              "reverse": false,
+              "frontImage": "",
+              "backImage": "",
+              "links": [{"label": "Seagrass biology", "url": "https://en.wikipedia.org/wiki/Seagrass"}],
+              "reviews": []
+            },
+            {
+              "id": "coast-blue-carbon",
+              "type": "standard",
+              "front": "Blue carbon",
+              "back": "Carbon captured and stored by ocean and coastal ecosystems, including mangroves, salt marshes and seagrass meadows.",
+              "reverse": true,
+              "frontImage": "",
+              "backImage": "",
+              "links": [{"label": "NOAA: What is blue carbon?", "url": "https://oceanservice.noaa.gov/facts/bluecarbon.html"}],
+              "reviews": []
+            },
+            {
+              "id": "coast-mangrove-roots",
+              "type": "standard",
+              "front": "How can mangrove roots help protect a shoreline?",
+              "back": "Root networks slow water movement and trap sediment, helping reduce erosion.",
+              "reverse": false,
+              "frontImage": "",
+              "backImage": "",
+              "links": [{"label": "NOAA: Mangroves", "url": "https://oceanservice.noaa.gov/facts/mangroves.html"}],
+              "reviews": []
+            },
+            {
+              "id": "coast-estuary",
+              "type": "pearl",
+              "front": "A partly enclosed coastal water body where river freshwater meets seawater is an {{estuary}}.",
+              "back": "Many estuaries provide nursery habitat and have salinity that changes with tides and river flow.",
+              "reverse": false,
+              "frontImage": "",
+              "backImage": "",
+              "links": [{"label": "NOAA: Estuaries", "url": "https://oceanservice.noaa.gov/facts/estuary.html"}],
+              "reviews": []
+            },
+            {
+              "id": "coast-intertidal",
+              "type": "standard",
+              "front": "What two broad physical stresses alternate for organisms in the intertidal zone?",
+              "back": "Exposure to air during low tide and submersion with wave action during high tide.",
+              "reverse": false,
+              "frontImage": "",
+              "backImage": "",
+              "links": [{"label": "Intertidal zone ecology", "url": "https://en.wikipedia.org/wiki/Intertidal_zone"}],
+              "reviews": []
+            }
+          ]
+        },
+        {
+          "id": "ocean-processes",
+          "name": "Ocean Processes",
+          "cards": [
+            {
+              "id": "ocean-upwelling",
+              "type": "standard",
+              "front": "Upwelling",
+              "back": "The movement of deeper water toward the surface, often bringing nutrients into the sunlit zone.",
+              "reverse": true,
+              "frontImage": "",
+              "backImage": "",
+              "links": [{"label": "NOAA: Upwelling", "url": "https://oceanservice.noaa.gov/facts/upwelling.html"}],
+              "reviews": []
+            },
+            {
+              "id": "ocean-acidification",
+              "type": "pearl",
+              "front": "As seawater absorbs more atmospheric carbon dioxide, its pH generally {{decreases}}.",
+              "back": "Ocean acidification describes this shift; seawater need not fall below pH 7 to be acidifying.",
+              "reverse": false,
+              "frontImage": "",
+              "backImage": "",
+              "links": [{"label": "NOAA: Ocean acidification", "url": "https://oceanservice.noaa.gov/facts/acidification.html"}],
+              "reviews": []
+            },
+            {
+              "id": "ocean-bleaching",
+              "type": "standard",
+              "front": "What happens to the coral–algal relationship during common heat-driven coral bleaching?",
+              "back": "Corals lose many of their symbiotic algae or their pigments, revealing the pale skeleton beneath the tissue.",
+              "reverse": false,
+              "frontImage": "",
+              "backImage": "",
+              "links": [{"label": "NOAA: Coral bleaching", "url": "https://oceanservice.noaa.gov/facts/coral_bleach.html"}],
+              "reviews": []
+            },
+            {
+              "id": "ocean-eutrophication",
+              "type": "standard",
+              "front": "How can excess nutrient input lead to low dissolved oxygen in coastal water?",
+              "back": "Nutrients can fuel algal growth; microbial decomposition of the resulting organic matter consumes oxygen.",
+              "reverse": false,
+              "frontImage": "",
+              "backImage": "",
+              "links": [{"label": "NOAA: Eutrophication", "url": "https://oceanservice.noaa.gov/facts/eutrophication.html"}],
+              "reviews": []
+            },
+            {
+              "id": "ocean-phytoplankton",
+              "type": "pearl",
+              "front": "Photosynthetic plankton that form much of the base of marine food webs are called {{phytoplankton}}.",
+              "back": "Their growth depends on light and nutrients, among other conditions.",
+              "reverse": false,
+              "frontImage": "",
+              "backImage": "",
+              "links": [{"label": "NOAA: Phytoplankton", "url": "https://oceanservice.noaa.gov/facts/phyto.html"}],
+              "reviews": []
+            },
+            {
+              "id": "ocean-trophic-cascade",
+              "type": "standard",
+              "front": "How can sea otters indirectly benefit kelp?",
+              "back": "By eating sea urchins, sea otters can reduce grazing pressure on kelp.",
+              "reverse": false,
+              "frontImage": "",
+              "backImage": "",
+              "links": [{"label": "Trophic cascades", "url": "https://en.wikipedia.org/wiki/Trophic_cascade"}],
+              "reviews": []
+            }
+          ]
+        }
+      ],
+      "history": []
+    },
+    {
+      "id": "conservation-biology",
+      "name": "Conservation Biology",
+      "stacks": [
+        {
+          "id": "population-resilience",
+          "name": "Population Resilience",
+          "cards": [
+            {
+              "id": "population-effective-size",
+              "type": "standard",
+              "front": "Effective population size",
+              "back": "The size of an idealized population that would experience genetic drift or inbreeding at the same rate as the population being studied.",
+              "reverse": true,
+              "frontImage": "",
+              "backImage": "",
+              "links": [{"label": "Effective population size", "url": "https://en.wikipedia.org/wiki/Effective_population_size"}],
+              "reviews": []
+            },
+            {
+              "id": "population-drift",
+              "type": "pearl",
+              "front": "Random changes in allele frequencies between generations are called {{genetic drift}}.",
+              "back": "Drift is generally stronger in populations with smaller effective population sizes.",
+              "reverse": false,
+              "frontImage": "",
+              "backImage": "",
+              "links": [{"label": "Genetic drift", "url": "https://en.wikipedia.org/wiki/Genetic_drift"}],
+              "reviews": []
+            },
+            {
+              "id": "population-inbreeding",
+              "type": "standard",
+              "front": "Why can inbreeding reduce fitness?",
+              "back": "It increases homozygosity, which can expose harmful recessive alleles and contribute to inbreeding depression.",
+              "reverse": false,
+              "frontImage": "",
+              "backImage": "",
+              "links": [{"label": "Inbreeding depression", "url": "https://en.wikipedia.org/wiki/Inbreeding_depression"}],
+              "reviews": []
+            },
+            {
+              "id": "population-metapopulation",
+              "type": "standard",
+              "front": "Metapopulation",
+              "back": "A set of local populations of one species linked by dispersal, with local extinctions and recolonizations possible.",
+              "reverse": true,
+              "frontImage": "",
+              "backImage": "",
+              "links": [{"label": "Metapopulation ecology", "url": "https://en.wikipedia.org/wiki/Metapopulation"}],
+              "reviews": []
+            },
+            {
+              "id": "population-allee",
+              "type": "pearl",
+              "front": "When individual fitness increases with population density at low density, this is an {{Allee effect}}.",
+              "back": "One possible mechanism is difficulty finding mates when individuals are sparse.",
+              "reverse": false,
+              "frontImage": "",
+              "backImage": "",
+              "links": [{"label": "Allee effect", "url": "https://en.wikipedia.org/wiki/Allee_effect"}],
+              "reviews": []
+            },
+            {
+              "id": "population-pva",
+              "type": "standard",
+              "front": "What is the main purpose of a population viability analysis?",
+              "back": "To estimate population persistence or extinction risk under stated assumptions and management scenarios.",
+              "reverse": false,
+              "frontImage": "",
+              "backImage": "",
+              "links": [{"label": "Population viability analysis", "url": "https://en.wikipedia.org/wiki/Population_viability_analysis"}],
+              "reviews": []
+            }
+          ]
+        },
+        {
+          "id": "conservation-in-practice",
+          "name": "Conservation in Practice",
+          "cards": [
+            {
+              "id": "practice-corridors",
+              "type": "standard",
+              "front": "How can a habitat corridor support fragmented populations?",
+              "back": "It can facilitate movement and gene flow between habitat patches, although effectiveness depends on species and corridor design.",
+              "reverse": false,
+              "frontImage": "",
+              "backImage": "",
+              "links": [{"label": "Wildlife corridors", "url": "https://en.wikipedia.org/wiki/Wildlife_corridor"}],
+              "reviews": []
+            },
+            {
+              "id": "practice-edge",
+              "type": "pearl",
+              "front": "Ecological changes near a boundary between habitat types are called {{edge effects}}.",
+              "back": "Edges can alter light, wind, temperature and species interactions; effects vary among organisms.",
+              "reverse": false,
+              "frontImage": "",
+              "backImage": "",
+              "links": [{"label": "Edge effects", "url": "https://en.wikipedia.org/wiki/Edge_effects"}],
+              "reviews": []
+            },
+            {
+              "id": "practice-adaptive",
+              "type": "standard",
+              "front": "Adaptive management",
+              "back": "An iterative approach that uses monitoring and learning to revise management actions under uncertainty.",
+              "reverse": true,
+              "frontImage": "",
+              "backImage": "",
+              "links": [{"label": "Adaptive management", "url": "https://en.wikipedia.org/wiki/Adaptive_management"}],
+              "reviews": []
+            },
+            {
+              "id": "practice-invasive",
+              "type": "standard",
+              "front": "Why is a non-native species not automatically described as invasive?",
+              "back": "Being non-native describes origin; invasive species also spread and cause ecological, economic or other harm under commonly used management definitions.",
+              "reverse": false,
+              "frontImage": "",
+              "backImage": "",
+              "links": [{"label": "Invasive species concepts", "url": "https://en.wikipedia.org/wiki/Invasive_species"}],
+              "reviews": []
+            },
+            {
+              "id": "practice-baci",
+              "type": "pearl",
+              "front": "A study comparing an impacted site with a control site both before and after an intervention uses a {{BACI}} design.",
+              "back": "BACI means Before–After, Control–Impact. Replication strengthens inference about the intervention.",
+              "reverse": false,
+              "frontImage": "",
+              "backImage": "",
+              "links": [{"label": "Environmental impact assessment", "url": "https://en.wikipedia.org/wiki/Environmental_impact_assessment"}],
+              "reviews": []
+            },
+            {
+              "id": "practice-redundancy",
+              "type": "standard",
+              "front": "How can functional redundancy contribute to ecosystem resilience?",
+              "back": "If several species perform similar ecological roles, some functions may persist when one species declines.",
+              "reverse": false,
+              "frontImage": "",
+              "backImage": "",
+              "links": [{"label": "Ecological redundancy", "url": "https://en.wikipedia.org/wiki/Functional_redundancy"}],
+              "reviews": []
+            }
+          ]
+        }
+      ],
+      "history": []
+    }
+  ],
+  "cache": {},
+  "settings": {
+    "model": "claude-haiku-4-5-20251001",
+    "theme": "coastal"
+  }
+}
