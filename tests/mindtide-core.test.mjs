@@ -343,4 +343,44 @@ assert.equal(blankGenerated[0].question, 'Within marine reserves, fishing pressu
 assert.equal(blankGenerated[0].choices.length, 3);
 assert.ok(blankGenerated[0].choices.every(choice => core.normalize(choice) !== core.normalize(blankPrompt.answer)));
 
+// Stack sharing (.mt files)
+assert.equal(core.SHARE_FORMAT, 'mindtide-stack');
+assert.equal(core.SHARE_EXTENSION, '.mt');
+assert.equal(core.shareFileName('Coral Reef Systems!', new Date('2026-02-03T10:00:00Z')), 'coral-reef-systems-2026-02-03.mt');
+assert.equal(core.shareFileName('   ', new Date('2026-02-03T10:00:00Z')), 'card-stack-2026-02-03.mt');
+
+const sharedSource = {
+  id: 'stack-share',
+  name: 'Coral reef systems',
+  cards: [
+    { id: 'c1', type: 'standard', front: 'What is a polyp?', back: 'A coral animal.', reverse: true, frontImage: '', backImage: '', links: [], reviews: [{ at: '2026-01-01T00:00:00Z', rating: 'easy' }] },
+    { id: 'c2', type: 'pearl', front: 'Reefs are built by {{calcium carbonate}}.', back: '', reverse: false, frontImage: '', backImage: '', links: [{ label: 'NOAA', url: 'https://example.com/reef' }], reviews: [] }
+  ]
+};
+const sharePayload = core.buildStackShare(sharedSource);
+assert.equal(sharePayload.format, 'mindtide-stack');
+assert.equal(sharePayload.version, 1);
+assert.deepEqual(sharePayload.stack, { name: 'Coral reef systems' });
+assert.equal(sharePayload.cards.length, 2);
+assert.ok(sharePayload.cards.every(card => !('id' in card) && !('reviews' in card)));
+
+const roundTrip = core.validateStackShare(JSON.stringify(sharePayload));
+assert.equal(roundTrip.name, 'Coral reef systems');
+assert.equal(roundTrip.cards.length, 2);
+assert.equal(roundTrip.cards[0].reverse, true);
+assert.equal(roundTrip.cards[1].type, 'pearl');
+assert.equal(roundTrip.cards[1].links[0].url, 'https://example.com/reef');
+
+assert.throws(() => core.buildStackShare({ name: 'Empty', cards: [] }), /cards/);
+assert.throws(() => core.validateStackShare('{not json'), /could not be read/);
+assert.throws(() => core.validateStackShare({ format: 'mindtide-cards', version: 1, cards: [] }), /card file/i);
+assert.throws(() => core.validateStackShare({ schemaVersion: 1, subjects: [] }), /journal backup/i);
+assert.throws(() => core.validateStackShare({ ...sharePayload, extra: true }), /Invalid shared stack/);
+assert.throws(() => core.validateStackShare({ ...sharePayload, stack: { name: '' } }), /Invalid shared stack/);
+
+// A shared stack is also accepted by the card importer.
+const asCards = core.validateCardImport(JSON.stringify(sharePayload));
+assert.equal(asCards.length, 2);
+assert.throws(() => core.validateLibrary(sharePayload), /Invalid library/);
+
 console.log('MindTide core tests passed.');

@@ -20,11 +20,12 @@ MindTide combines the quiet ritual of a personal field journal with transparent,
 
 ## Operating Context
 
-MindTide runs as a standalone HTML file in a modern browser without installation or a server. Learners may work offline after generating questions. They can export and import the complete journal as JSON for backup and portability.
+MindTide runs as a standalone HTML file in a modern browser without installation or a server. Learners may work offline after generating questions. They can export and import the complete journal as JSON for backup and portability, and exchange individual card stacks with other learners as `.mt` files.
 
 ## Capabilities and Constraints
 
 - Subjects contain stacks; stacks contain Standard or Hidden Pearl flashcards.
+- A single stack can be shared as a portable `.mt` file named after the stack and the export date, and added to any subject by drop target or file picker.
 - Study sessions support free recall and optional Easy/Hard card labels.
 - Testing owns a catalogue of separately generated Easy and Hard questions.
 - Test creation is offline and uses only catalogue entries already saved locally.

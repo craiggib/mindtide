@@ -344,6 +344,11 @@ input[type=radio]{accent-color:var(--teal)}
 .import-preview-card .label{margin-top:14px}
 .import-pager{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:18px 0}
 .card-import .notice,.card-import .help{margin-bottom:18px}
+.share-drop{margin-top:36px;padding:24px;border:2px dashed var(--line);border-radius:var(--radius);background:var(--white);transition:border-color .15s,background .15s}
+.share-drop h2{margin:0 0 6px}
+.share-drop.is-over{border-color:var(--teal);background:var(--wash)}
+.share-drop input[type=file]{margin-top:14px}
+.share-drop .help{margin-top:10px}
 
 @keyframes shore-swim{0%,1%,99%,100%{transform:translate(10px,16px)}49%,51%{transform:translate(-70px,22px)}}
 @keyframes shore-bob{0%,100%{transform:translateY(-3px)}50%{transform:translateY(3px)}}
@@ -940,6 +945,8 @@ const TideCore = (() => {
   // Reuse the old slot so replacing an encrypted key is one atomic write.
   const API_KEY_STORAGE_KEY = 'mindtide.vault.v1';
   const MAX_BYTES = 20 * 1024 * 1024;
+  const SHARE_FORMAT = 'mindtide-stack';
+  const SHARE_EXTENSION = '.mt';
   const VERSION = 2;
   const generationLevels = ['easy', 'hard'];
   const legacyDifficulties = ['shallow', 'current', 'deep'];
@@ -1081,21 +1088,8 @@ const TideCore = (() => {
       })
     };
   }
-  function validateCardImport(value) {
-    try {
-      if (typeof value === 'string') {
-        if (value.length > MAX_BYTES || encoder.encode(value).byteLength > MAX_BYTES) invalid('file', 'exceeds the 20 MB limit');
-        try { value = JSON.parse(value); }
-        catch { throw new Error('This card file could not be read. Ask your AI agent for valid JSON without Markdown fences or extra commentary.'); }
-      }
-      object(value, 'file');
-      if (Array.isArray(value.subjects) && value.schemaVersion !== undefined) throw new Error('This is a journal backup. Use Import journal in Settings instead of Import cards.');
-      oneOf(value.format, ['mindtide-cards'], 'format');
-      oneOf(value.version, [1], 'version');
-      if (Object.keys(value).some(key => !['format', 'version', 'cards'].includes(key))) invalid('file', 'must contain only format, version, and cards');
-      const serialized = JSON.stringify(value);
-      if (serialized.length > MAX_BYTES || encoder.encode(serialized).byteLength > MAX_BYTES) invalid('file', 'exceeds the 20 MB limit');
-      return array(value.cards, 'cards', 10000, 1).map((input, i) => {
+  function importedCards(value) {
+    return array(value, 'cards', 10000, 1).map((input, i) => {
         const path = `Card ${i + 1}`;
         object(input, path);
         const fields = ['type', 'front', 'back', 'reverse', 'links', 'frontImage', 'backImage'];
@@ -1110,13 +1104,82 @@ const TideCore = (() => {
           frontImage: input.frontImage === undefined ? '' : input.frontImage,
           backImage: input.backImage === undefined ? '' : input.backImage
         }, path, 6000);
-      });
-    } catch (error) {
-      if (error instanceof Error && error.message.startsWith('Invalid library: ')) {
-        throw new Error(error.message.replace('Invalid library: ', 'Invalid card file: '));
-      }
-      throw error;
+    });
+  }
+  function parseShared(value, kind, label) {
+    if (typeof value === 'string') {
+      if (value.length > MAX_BYTES || encoder.encode(value).byteLength > MAX_BYTES) invalid('file', 'exceeds the 20 MB limit');
+      try { return JSON.parse(value); }
+      catch { throw new Error(`This ${label} could not be read as JSON. ${kind === 'stack' ? 'Ask the person who shared it to export the stack again from MindTide.' : 'Ask your AI agent for valid JSON without Markdown fences or extra commentary.'}`); }
     }
+    return value;
+  }
+  function checkSize(value) {
+    const serialized = JSON.stringify(value);
+    if (serialized.length > MAX_BYTES || encoder.encode(serialized).byteLength > MAX_BYTES) invalid('file', 'exceeds the 20 MB limit');
+  }
+  function rethrow(error, label) {
+    if (error instanceof Error && error.message.startsWith('Invalid library: ')) {
+      throw new Error(error.message.replace('Invalid library: ', `Invalid ${label}: `));
+    }
+    throw error;
+  }
+  function validateCardImport(value) {
+    try {
+      value = parseShared(value, 'cards', 'card file');
+      object(value, 'file');
+      if (Array.isArray(value.subjects) && value.schemaVersion !== undefined) throw new Error('This is a journal backup. Use Import journal in Settings instead of Import cards.');
+      if (value.format === SHARE_FORMAT) return validateStackShare(value).cards;
+      oneOf(value.format, ['mindtide-cards'], 'format');
+      oneOf(value.version, [1], 'version');
+      if (Object.keys(value).some(key => !['format', 'version', 'cards'].includes(key))) invalid('file', 'must contain only format, version, and cards');
+      checkSize(value);
+      return importedCards(value.cards);
+    } catch (error) {
+      rethrow(error, 'card file');
+    }
+  }
+  function validateStackShare(value) {
+    try {
+      value = parseShared(value, 'stack', 'shared stack');
+      object(value, 'file');
+      if (Array.isArray(value.subjects) && value.schemaVersion !== undefined) throw new Error('This is a journal backup. Use Import journal in Settings instead of a shared stack.');
+      if (value.format === 'mindtide-cards') throw new Error('This is a card file. Use Import cards in Settings to preview and add it.');
+      oneOf(value.format, [SHARE_FORMAT], 'format');
+      oneOf(value.version, [1], 'version');
+      if (Object.keys(value).some(key => !['format', 'version', 'stack', 'cards'].includes(key))) invalid('file', 'must contain only format, version, stack, and cards');
+      object(value.stack, 'stack');
+      if (Object.keys(value.stack).some(key => key !== 'name')) invalid('stack', 'must contain only a name');
+      const name = string(value.stack.name, 'stack.name', 100).trim();
+      if (!name) invalid('stack.name', 'must be a nonblank text value of at most 100 characters');
+      checkSize(value);
+      return { name, cards: importedCards(value.cards) };
+    } catch (error) {
+      rethrow(error, 'shared stack');
+    }
+  }
+  function shareFileName(name, date = new Date()) {
+    const slug = normalize(name).replace(/[^a-z0-9]+/gu, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+    const stamp = Number.isFinite(date?.getTime?.()) ? date.toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
+    return `${slug || 'card-stack'}-${stamp}${SHARE_EXTENSION}`;
+  }
+  function buildStackShare(stack) {
+    const payload = {
+      format: SHARE_FORMAT,
+      version: 1,
+      stack: { name: string(stack?.name, 'stack.name', 100) },
+      cards: array(stack?.cards, 'cards', 10000, 1).map(card => ({
+        type: card.type,
+        front: card.front,
+        back: card.back,
+        reverse: card.reverse,
+        frontImage: card.frontImage,
+        backImage: card.backImage,
+        links: card.links
+      }))
+    };
+    validateStackShare(payload);
+    return payload;
   }
   function validateLibrary(value) {
     if (typeof value === 'string') {
@@ -1649,7 +1712,7 @@ const TideCore = (() => {
   }
 
   return {
-    DEFAULT_MODEL, STORAGE_KEY, API_KEY_STORAGE_KEY, THEMES, generationLevels, uid, normalize, validateLibrary, validateCardImport, load, save,
+    DEFAULT_MODEL, STORAGE_KEY, API_KEY_STORAGE_KEY, THEMES, SHARE_FORMAT, SHARE_EXTENSION, generationLevels, uid, normalize, validateLibrary, validateCardImport, validateStackShare, buildStackShare, shareFileName, load, save,
     prompts, shuffle, weakness, cacheKey, cached,
     apiKeyStatus, apiKeySave, apiKeyRemove, generate
   };
@@ -1662,7 +1725,7 @@ const TideCore = (() => {
 const App = (() => {
   const C = TideCore;
   // Increment for each shipped iteration; journal schemaVersion is independent.
-  const APP_VERSION = '2.3.1';
+  const APP_VERSION = '2.4.0';
   document.title = `MindTide v${APP_VERSION} — Your study field journal`;
   const $ = (selector, root = document) => root.querySelector(selector);
   const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -1835,11 +1898,54 @@ STUDY MATERIAL
   function renderSubject() {
     const s = currentSubject(); if (!s) { go({page:'home'}); return; }
     const cards = allCards(s);
-    $('#content').innerHTML = `<div class="page">${heading(s.name,`${s.stacks.length} stacks · ${cards.length} cards · A workspace for one subject.`,btn('New card stack','new-stack','','primary','plus'))}${pageError()}<div class="actions">${btn('Testing','testing',`data-subject="${esc(s.id)}"`,'','note')}${btn('Rename subject','rename-subject','','quiet','edit')}${btn('Delete subject','delete-subject','','quiet','trash')}</div><div class="section-head"><h2>Card stacks</h2><p>Small topics. Focused sessions.</p></div>${s.stacks.length ? `<div class="stack-list">${s.stacks.map(stack => `<article class="stack-row"><div class="stack-glyph">${icon('book')}</div><div class="stack-main"><button class="stack-title" data-action="stack" data-id="${esc(stack.id)}">${esc(stack.name)}</button><p>${stack.cards.length} cards</p></div><div class="actions">${btn('Open stack','stack',`data-id="${esc(stack.id)}"`,'small')}${btn('Study','study-setup',`data-id="${esc(stack.id)}"`,'small primary','book')}${btn('Test','testing',`data-subject="${esc(s.id)}" data-stack="${esc(stack.id)}"`,'small','note')}<div class="row-tools">${tool(`Delete ${stack.name}`,'delete-stack',`data-id="${esc(stack.id)}"`,'trash')}</div></div></article>`).join('')}</div>` : empty('Give this subject a starting point','Create a stack for a lecture, topic, or field trip.',btn('New card stack','new-stack','','primary','plus'))}</div>`;
+    $('#content').innerHTML = `<div class="page">${heading(s.name,`${s.stacks.length} stacks · ${cards.length} cards · A workspace for one subject.`,btn('New card stack','new-stack','','primary','plus'))}${pageError()}<div class="actions">${btn('Testing','testing',`data-subject="${esc(s.id)}"`,'','note')}${btn('Rename subject','rename-subject','','quiet','edit')}${btn('Delete subject','delete-subject','','quiet','trash')}</div><div class="section-head"><h2>Card stacks</h2><p>Small topics. Focused sessions.</p></div>${s.stacks.length ? `<div class="stack-list">${s.stacks.map(stack => `<article class="stack-row"><div class="stack-glyph">${icon('book')}</div><div class="stack-main"><button class="stack-title" data-action="stack" data-id="${esc(stack.id)}">${esc(stack.name)}</button><p>${stack.cards.length} cards</p></div><div class="actions">${btn('Open stack','stack',`data-id="${esc(stack.id)}"`,'small')}${btn('Study','study-setup',`data-id="${esc(stack.id)}"`,'small primary','book')}${btn('Test','testing',`data-subject="${esc(s.id)}" data-stack="${esc(stack.id)}"`,'small','note')}<div class="row-tools">${tool(`Share ${stack.name}`,'share-stack',`data-id="${esc(stack.id)}"`,'download')}${tool(`Delete ${stack.name}`,'delete-stack',`data-id="${esc(stack.id)}"`,'trash')}</div></div></article>`).join('')}</div>` : empty('Give this subject a starting point','Create a stack for a lecture, topic, or field trip.',btn('New card stack','new-stack','','primary','plus'))}<section class="share-drop" id="stack-drop"><h2>Add a shared stack</h2><p>Someone sent you a MindTide stack? Drop the <strong>${esc(C.SHARE_EXTENSION)}</strong> file here, or choose it below. It is added as a new stack in ${esc(s.name)}; nothing already in your journal changes.</p><div class="field"><label for="stack-import-file">Shared stack file</label><input type="file" id="stack-import-file" accept="${esc(C.SHARE_EXTENSION)}" aria-describedby="stack-drop-help"></div><p class="help" id="stack-drop-help">Shared stacks contain cards only. Ratings, study history, generated questions, and saved tests are never shared.</p></section></div>`;
+    const drop = $('#stack-drop');
+    for (const type of ['dragenter','dragover']) drop.addEventListener(type,event=>{event.preventDefault();if(event.dataTransfer)event.dataTransfer.dropEffect='copy';drop.classList.add('is-over');});
+    for (const type of ['dragleave','dragend']) drop.addEventListener(type,event=>{if(!drop.contains(event.relatedTarget))drop.classList.remove('is-over');});
+    drop.addEventListener('drop',async event=>{
+      event.preventDefault();drop.classList.remove('is-over');
+      const files=[...(event.dataTransfer?.files||[])];
+      try{
+        if(files.length!==1)throw new Error('Drop one shared stack file at a time.');
+        await importSharedStack(files[0]);
+      }catch(error){report(error);}
+    });
+  }
+  function shareStack(stackId) {
+    const s = currentSubject(), stack = s?.stacks.find(st=>st.id===stackId);
+    if (!stack) throw new Error('This card stack is no longer available.');
+    if (!stack.cards.length) throw new Error('Add at least one card before sharing this stack.');
+    download(C.shareFileName(stack.name),JSON.stringify(C.buildStackShare(stack),null,2));
+    notify(`"${stack.name}" saved as a shareable file. Send it to anyone using MindTide; they can drop it into a subject workspace.`);
+  }
+  function uniqueStackName(subject, name) {
+    const taken = new Set(subject.stacks.map(st=>C.normalize(st.name)));
+    if (!taken.has(C.normalize(name))) return name;
+    const base = name.length > 90 ? name.slice(0,90).trim() : name;
+    for (let i = 2; i < 500; i++) { const candidate = `${base} (${i})`; if (!taken.has(C.normalize(candidate))) return candidate; }
+    return base;
+  }
+  async function importSharedStack(file) {
+    if (!file) return;
+    const s = currentSubject();
+    if (!s) throw new Error('Open a subject workspace before adding a shared stack.');
+    if (!file.name.toLowerCase().endsWith(C.SHARE_EXTENSION)) throw new Error(`Choose a MindTide shared stack file ending in ${C.SHARE_EXTENSION}. Card files and journal backups are imported from Settings.`);
+    if (file.size > 20*1024*1024) throw new Error('This shared stack is larger than 20 MB. Ask the sender to split it into smaller stacks.');
+    const shared = C.validateStackShare(await file.text());
+    const subjectId = s.id, name = uniqueStackName(s,shared.name), count = shared.cards.length;
+    confirmAction('Add this shared stack?',`Add "${name}" with ${count} ${count===1?'card':'cards'} to ${s.name}? Your existing stacks, cards, generated questions, and tests are unchanged.`,'Add stack',()=>{
+      const stackId = C.uid();
+      commit(next=>{
+        const subject = next.subjects.find(x=>x.id===subjectId);
+        if (!subject) throw new Error('This subject workspace is no longer available.');
+        subject.stacks.push({id:stackId,name,cards:shared.cards.map(content=>({id:C.uid(),...content,reviews:[]}))});
+      });
+      testPlan=null;go({page:'stack',subjectId,stackId});notify(`${count} ${count===1?'card':'cards'} added in "${name}".`);
+    });
   }
   function renderStack() {
     const s = currentSubject(), stack = currentStack(); if (!stack) { go(subjectRoute()); return; }
-    $('#content').innerHTML = `<div class="page">${heading(stack.name,`${stack.cards.length} cards in ${esc(s.name)}`,btn('Add a card','new-card','','primary','plus'),btn('Edit stack','rename-stack',`data-id="${esc(stack.id)}"`,'quiet','edit'))}${pageError()}<div class="actions">${btn('Study cards','study-setup',`data-id="${esc(stack.id)}"`,'primary','book')}${btn('Testing','testing',`data-subject="${esc(s.id)}" data-stack="${esc(stack.id)}"`,'','note')}</div><div class="searchbar"><label><span class="sr-only">Search cards</span>${icon('search')}<input type="search" id="card-search" placeholder="Find a question or answer..." value="${esc(route.search || '')}" maxlength="200"></label><span class="small muted" id="search-count"></span></div><div id="card-results"></div></div>`;
+    $('#content').innerHTML = `<div class="page">${heading(stack.name,`${stack.cards.length} cards in ${esc(s.name)}`,btn('Add a card','new-card','','primary','plus'),btn('Edit stack','rename-stack',`data-id="${esc(stack.id)}"`,'quiet','edit'))}${pageError()}<div class="actions">${btn('Study cards','study-setup',`data-id="${esc(stack.id)}"`,'primary','book')}${btn('Testing','testing',`data-subject="${esc(s.id)}" data-stack="${esc(stack.id)}"`,'','note')}${btn('Share stack','share-stack',`data-id="${esc(stack.id)}"`,'','download')}</div><div class="searchbar"><label><span class="sr-only">Search cards</span>${icon('search')}<input type="search" id="card-search" placeholder="Find a question or answer..." value="${esc(route.search || '')}" maxlength="200"></label><span class="small muted" id="search-count"></span></div><div id="card-results"></div></div>`;
     renderCardResults();
   }
   function renderCardResults() {
@@ -2316,7 +2422,7 @@ STUDY MATERIAL
     const pageSize=10, start=pending.page*pageSize, shown=cards?.slice(start,start+pageSize) || [];
     const newSubject=pending.subjectId==='__new__', newStack=newSubject||pending.stackId==='__new__';
     $('#content').innerHTML=`<div class="page settings card-import">${heading('Import cards. Keep your journal.','Preview a card file, then choose where to add it.',btn('Back to Settings','settings','','quiet','back'))}${pageError()}
-      <section class="settings-section"><h2>${cards?'Card file ready':'Choose a card file'}</h2><div class="field"><label for="card-import-file">${cards?'Choose a different file':'Card file'}</label><input type="file" id="card-import-file" accept=".json,application/json" aria-describedby="card-import-file-help"></div><p class="help" id="card-import-file-help">Use the MindTide card format below. Up to 10,000 cards and 20 MB. Journal backups belong in Import journal instead.</p>
+      <section class="settings-section"><h2>${cards?'Card file ready':'Choose a card file'}</h2><div class="field"><label for="card-import-file">${cards?'Choose a different file':'Card file'}</label><input type="file" id="card-import-file" accept=".json,application/json,.mt" aria-describedby="card-import-file-help"></div><p class="help" id="card-import-file-help">Use the MindTide card format below. Up to 10,000 cards and 20 MB. Journal backups belong in Import journal instead.</p>
         ${pending.loading?'<p role="status">Reading and checking the card file...</p>':''}
         ${cards?`<p class="break"><strong>${cards.length} ${cards.length===1?'card':'cards'} ready to preview</strong> from ${esc(pending.fileName)}. Nothing has been saved yet.</p>`:''}
       </section>
@@ -2389,6 +2495,7 @@ STUDY MATERIAL
     if(file.size>20*1024*1024)throw new Error('This journal file is larger than 20 MB. Choose a smaller MindTide journal.');
     let parsed;try{parsed=JSON.parse(await file.text());}catch{throw new Error('This file could not be read as a journal. Choose a journal exported from MindTide.');}
     if(parsed?.format==='mindtide-cards')throw new Error('This is a card file. Use Import cards in Settings to preview and add it without replacing your journal.');
+    if(parsed?.format===C.SHARE_FORMAT)throw new Error('This is a shared card stack. Open a subject workspace and drop it in "Add a shared stack" to add it without replacing your journal.');
     const imported=C.validateLibrary(parsed);
     confirmAction('Replace your field journal?',`Import ${imported.subjects.length} subjects and ${imported.subjects.reduce((n,s)=>n+allCards(s).length,0)} cards? This replaces your current cards, generated questions, and tests. Export your current journal first if you need a backup. Your saved API key is not changed.`,'Replace journal',()=>{
       C.save(imported);expectedRecord=localStorage.getItem(C.STORAGE_KEY);library=imported;applyTheme(library.settings.theme);invalidateCatalogue();draft=null;testPlan=null;startupError='';go({page:'home'});notify('Journal imported, including its theme, generated questions, and saved tests.');
@@ -2420,6 +2527,7 @@ STUDY MATERIAL
     'new-stack':()=>nameDialog('stack'),
     'rename-stack':b=>nameDialog('stack',currentSubject().stacks.find(s=>s.id===b.dataset.id)),
     'delete-stack':b=>deleteEntity('stack',b.dataset.id),
+    'share-stack':b=>shareStack(b.dataset.id),
     'new-card':()=>newDraft(),
     'edit-card':b=>newDraft(b.dataset.id),
     'delete-card':b=>deleteEntity('card',b.dataset.id),
@@ -2511,6 +2619,7 @@ STUDY MATERIAL
         }
       }
       if(field.id==='import-file'){await importFile(field.files[0]);field.value='';}
+      if(field.id==='stack-import-file'){const chosen=field.files[0];field.value='';await importSharedStack(chosen);}
       if(field.id==='card-import-file')await previewCardImport(field.files[0]);
       if(cardImport&&field.id==='card-import-subject'){cardImport.subjectId=field.value;cardImport.stackId='';renderCardImport();}
       if(cardImport&&field.id==='card-import-stack'){cardImport.stackId=field.value;renderCardImport();}
@@ -2529,6 +2638,7 @@ STUDY MATERIAL
     if(study){if(event.code==='Space'){event.preventDefault();actions.reveal();}else if(study.revealed&&['1','2'].includes(event.key)){event.preventDefault();try{rate({1:'easy',2:'hard'}[event.key]);}catch(error){report(error);}}}
   });
   $('#dialog').addEventListener('cancel',event=>{event.preventDefault();closeDialog();});
+  for (const type of ['dragover','drop']) window.addEventListener(type,event=>{if(!event.target?.closest?.('#stack-drop'))event.preventDefault();});
   document.addEventListener('fullscreenchange',()=>{$('#study-fullscreen-error')?.replaceChildren();updateStudyFullscreen();});
   document.addEventListener('visibilitychange',updateShoreMotion);
   window.addEventListener('beforeunload',event=>{if(draft?.dirty||study||activeGeneration){event.preventDefault();event.returnValue='';}});
