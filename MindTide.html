@@ -333,6 +333,23 @@ input[type=radio]{accent-color:var(--teal)}
 .study-filter{justify-content:space-between}
 .study-filter[aria-pressed=true]{background:var(--wash);border-color:var(--teal);color:var(--teal-dark)}
 .study-filter-count{font-variant-numeric:tabular-nums;font-weight:400}
+.study-stack-list{display:grid;max-height:220px;overflow:auto;margin:12px 0;border-block:1px solid var(--line)}
+.study-stack-option{padding:12px 0;border-bottom:1px solid var(--row-line);align-items:flex-start}
+.study-stack-option:last-child{border-bottom:0}
+.study-stack-option input{flex:none;margin-top:4px}
+.study-stack-option span{min-width:0;overflow-wrap:anywhere}
+.study-stack-option small{display:block;color:var(--muted)}
+.study-stack-option:has(input:disabled){cursor:default}
+.study-source{margin:12px 0;color:var(--muted);font-size:.88rem;overflow-wrap:anywhere}
+.study-totals{display:flex;flex-wrap:wrap;gap:12px 28px;margin:24px 0;padding:20px 0;border-block:1px solid var(--line)}
+.study-totals div{display:grid;gap:4px}
+.study-totals dt{font-size:.85rem;color:var(--muted)}
+.study-totals dd{margin:0;font-weight:600}
+.study-stat-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;padding:20px 0;border-bottom:1px solid var(--line)}
+.study-stat-row h3{overflow-wrap:anywhere;white-space:pre-wrap}
+.study-stat-row p{font-size:.85rem;color:var(--muted);margin-top:6px}
+.study-stat-time{text-align:right;font-variant-numeric:tabular-nums}
+@media(max-width:500px){.study-stat-row{grid-template-columns:1fr}.study-stat-time{text-align:left}}
 .mobile-brand{display:none}
 .diff-status{text-align:center;font-size:.8rem;margin-bottom:15px;color:var(--muted)}
 .import-guide textarea{min-height:300px;font-family:ui-monospace,Consolas,monospace;font-size:.8rem}
@@ -1335,8 +1352,9 @@ const TideCore = (() => {
   }
   function prompts(subject, stackId = null) {
     const result = [];
+    const stackIds = stackId === null ? null : new Set(Array.isArray(stackId) ? stackId : [stackId]);
     for (const stack of subject.stacks) {
-      if (stackId !== null && stack.id !== stackId) continue;
+      if (stackIds !== null && !stackIds.has(stack.id)) continue;
       for (const card of stack.cards) {
         const base = {
           cardId: card.id, stackId: stack.id, subjectId: subject.id,
@@ -1725,7 +1743,7 @@ const TideCore = (() => {
 const App = (() => {
   const C = TideCore;
   // Increment for each shipped iteration; journal schemaVersion is independent.
-  const APP_VERSION = '2.4.0';
+  const APP_VERSION = '2.5.0';
   document.title = `MindTide v${APP_VERSION} — Your study field journal`;
   const $ = (selector, root = document) => root.querySelector(selector);
   const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -1848,6 +1866,7 @@ STUDY MATERIAL
   function persistCache(entries) { commit(next => { for (const entry of entries) next.cache[entry.key] = entry; }); }
   function invalidateCatalogue() { catalogueState = null; catalogueLoad = null; catalogueRevision++; }
   function go(next) {
+    if(study?.completed)study=null;
     if(route.page==='card-import'&&next.page!=='card-import'){cardImport=null;cardImportRead++;}
     route = next; render(); window.scrollTo({top:0}); $('#content h1')?.focus({preventScroll:true});
   }
@@ -1872,7 +1891,7 @@ STUDY MATERIAL
     if (startupError) { renderRecovery(); return; }
     applyTheme(library.settings.theme);
     renderShell();
-    if (study) { renderStudy(); return; }
+    if (study) { if(study.completed)renderStudySummary();else renderStudy(); return; }
     if (test) { renderTest(); return; }
     const renderer = {home:renderHome,subject:renderSubject,stack:renderStack,editor:renderEditor,settings:renderSettings,testing:renderTesting,history:renderTesting,'test-setup':renderTestSetup,'question-generation':renderQuestionGeneration,'card-import':renderCardImport,generating:renderGeneration,result:renderResult}[route.page] || renderHome;
     renderer();
@@ -1898,7 +1917,7 @@ STUDY MATERIAL
   function renderSubject() {
     const s = currentSubject(); if (!s) { go({page:'home'}); return; }
     const cards = allCards(s);
-    $('#content').innerHTML = `<div class="page">${heading(s.name,`${s.stacks.length} stacks · ${cards.length} cards · A workspace for one subject.`,btn('New card stack','new-stack','','primary','plus'))}${pageError()}<div class="actions">${btn('Testing','testing',`data-subject="${esc(s.id)}"`,'','note')}${btn('Rename subject','rename-subject','','quiet','edit')}${btn('Delete subject','delete-subject','','quiet','trash')}</div><div class="section-head"><h2>Card stacks</h2><p>Small topics. Focused sessions.</p></div>${s.stacks.length ? `<div class="stack-list">${s.stacks.map(stack => `<article class="stack-row"><div class="stack-glyph">${icon('book')}</div><div class="stack-main"><button class="stack-title" data-action="stack" data-id="${esc(stack.id)}">${esc(stack.name)}</button><p>${stack.cards.length} cards</p></div><div class="actions">${btn('Open stack','stack',`data-id="${esc(stack.id)}"`,'small')}${btn('Study','study-setup',`data-id="${esc(stack.id)}"`,'small primary','book')}${btn('Test','testing',`data-subject="${esc(s.id)}" data-stack="${esc(stack.id)}"`,'small','note')}<div class="row-tools">${tool(`Share ${stack.name}`,'share-stack',`data-id="${esc(stack.id)}"`,'download')}${tool(`Delete ${stack.name}`,'delete-stack',`data-id="${esc(stack.id)}"`,'trash')}</div></div></article>`).join('')}</div>` : empty('Give this subject a starting point','Create a stack for a lecture, topic, or field trip.',btn('New card stack','new-stack','','primary','plus'))}<section class="share-drop" id="stack-drop"><h2>Add a shared stack</h2><p>Someone sent you a MindTide stack? Drop the <strong>${esc(C.SHARE_EXTENSION)}</strong> file here, or choose it below. It is added as a new stack in ${esc(s.name)}; nothing already in your journal changes.</p><div class="field"><label for="stack-import-file">Shared stack file</label><input type="file" id="stack-import-file" accept="${esc(C.SHARE_EXTENSION)}" aria-describedby="stack-drop-help"></div><p class="help" id="stack-drop-help">Shared stacks contain cards only. Ratings, study history, generated questions, and saved tests are never shared.</p></section></div>`;
+    $('#content').innerHTML = `<div class="page">${heading(s.name,`${s.stacks.length} stacks · ${cards.length} cards · A workspace for one subject.`,btn('New card stack','new-stack','','primary','plus'))}${pageError()}<div class="actions">${btn('Study subject','study-setup','','primary','book')}${btn('Testing','testing',`data-subject="${esc(s.id)}"`,'','note')}${btn('Rename subject','rename-subject','','quiet','edit')}${btn('Delete subject','delete-subject','','quiet','trash')}</div><div class="section-head"><h2>Card stacks</h2><p>Study one stack, the entire subject, or a mix of topics.</p></div>${s.stacks.length ? `<div class="stack-list">${s.stacks.map(stack => `<article class="stack-row"><div class="stack-glyph">${icon('book')}</div><div class="stack-main"><button class="stack-title" data-action="stack" data-id="${esc(stack.id)}">${esc(stack.name)}</button><p>${stack.cards.length} cards</p></div><div class="actions">${btn('Open stack','stack',`data-id="${esc(stack.id)}"`,'small')}${btn('Study','study-setup',`data-id="${esc(stack.id)}"`,'small primary','book')}${btn('Test','testing',`data-subject="${esc(s.id)}" data-stack="${esc(stack.id)}"`,'small','note')}<div class="row-tools">${tool(`Share ${stack.name}`,'share-stack',`data-id="${esc(stack.id)}"`,'download')}${tool(`Delete ${stack.name}`,'delete-stack',`data-id="${esc(stack.id)}"`,'trash')}</div></div></article>`).join('')}</div>` : empty('Give this subject a starting point','Create a stack for a lecture, topic, or field trip.',btn('New card stack','new-stack','','primary','plus'))}<section class="share-drop" id="stack-drop"><h2>Add a shared stack</h2><p>Someone sent you a MindTide stack? Drop the <strong>${esc(C.SHARE_EXTENSION)}</strong> file here, or choose it below. It is added as a new stack in ${esc(s.name)}; nothing already in your journal changes.</p><div class="field"><label for="stack-import-file">Shared stack file</label><input type="file" id="stack-import-file" accept="${esc(C.SHARE_EXTENSION)}" aria-describedby="stack-drop-help"></div><p class="help" id="stack-drop-help">Shared stacks contain cards only. Ratings, study history, generated questions, and saved tests are never shared.</p></section></div>`;
     const drop = $('#stack-drop');
     for (const type of ['dragenter','dragover']) drop.addEventListener(type,event=>{event.preventDefault();if(event.dataTransfer)event.dataTransfer.dropEffect='copy';drop.classList.add('is-over');});
     for (const type of ['dragleave','dragend']) drop.addEventListener(type,event=>{if(!drop.contains(event.relatedTarget))drop.classList.remove('is-over');});
@@ -2030,13 +2049,33 @@ STUDY MATERIAL
       draft.card[side+'Image']=data; draft.dirty=true; $(`#${side}-image-url`).value=''; $(`#${side}-image-preview`).innerHTML=image(data,`${side} image preview`,'media-preview'); notify('Image prepared and embedded. Save the card to keep it.');
     } finally { token.uploads--; if (draft===token && $('#save-card')) $('#save-card').disabled=token.uploads>0; }
   }
-  function studySetup(stackId, supplied = null) {
+  function studySetup(stackId = null, supplied = null) {
     const s = currentSubject(), st = s.stacks.find(x=>x.id===stackId), pool = supplied || C.prompts(s,stackId);
-    if (!pool.length) { notify('Add a card to this stack before starting a study session.'); return; }
+    if (!pool.length) { notify(`Add a card to this ${stackId===null?'subject':'stack'} before starting a study session.`); return; }
+    const subjectScope=stackId===null&&!supplied;
     const categories=[['all','All'],['easy','Easy'],['hard','Hard']];
     const groupByPrompt=new Map(pool.map(p=>[p.id,findCard(p.cardId).reviews.at(-1)?.rating || 'unrated']));
+    const scopedPool=()=>{
+      if(!subjectScope||$('#study-scope').value==='all')return pool;
+      const selected=[...document.querySelectorAll('[data-study-stack]:checked')].map(input=>input.value);
+      return C.prompts(s,selected);
+    };
+    const updateSelection=()=>{
+      const scoped=scopedPool(), once=$('#study-duration').value==='once';
+      if(subjectScope)$('#study-stack-picker').hidden=$('#study-scope').value==='all';
+      for(const button of document.querySelectorAll('#study-filters button')){
+        const category=button.dataset.category, matching=category==='all'?scoped:scoped.filter(p=>groupByPrompt.get(p.id)===category);
+        const count=once?new Set(matching.map(p=>p.cardId)).size:matching.length, unit=once?'card':'prompt';
+        button.dataset.count=String(count);
+        $('.study-filter-count',button).textContent=count;
+        button.setAttribute('aria-label',`${category==='all'?'All':difficultyName(category)}, ${count} ${unit}${count===1?'':'s'}`);
+      }
+      updateStudyFilterCount(scoped.length===0?'Choose at least one stack with cards.':undefined);
+    };
     openDialog('Make a little headway',`
-      <p>${pool.length} ${pool.length===1?'prompt':'prompts'}${st?` in ${esc(st.name)}`:''}. Flip through a random order for as long as you like. Only you end the session.</p>
+      <p>Study ${esc(st?.name || (supplied?'Missed cards':s.name))} in a random order. Choose a single pass or keep going at your own pace.</p>
+      ${subjectScope?`<div class="field"><label for="study-scope">Study scope</label><select id="study-scope"><option value="all">Entire subject</option><option value="selected">Selected stacks</option></select></div><div id="study-stack-picker" hidden><span class="label" id="study-stacks-label">Stacks to include</span><div class="study-stack-list" role="group" aria-labelledby="study-stacks-label">${s.stacks.map(stack=>`<label class="check-label study-stack-option"><input type="checkbox" data-study-stack value="${esc(stack.id)}" ${stack.cards.length?'checked':'disabled'}><span>${esc(stack.name)}<small>${stack.cards.length} ${stack.cards.length===1?'card':'cards'}${stack.cards.length?'':' · Empty stack'}</small></span></label>`).join('')}</div></div>`:''}
+      <div class="field"><label for="study-duration">Session length</label><select id="study-duration" aria-describedby="study-duration-help"><option value="unlimited">Open-ended · Study as long as I want</option><option value="once">One pass · See every card once</option></select><p class="help" id="study-duration-help">One pass uses each card's front prompt, even when both directions are enabled, and finishes after you leave the last card. Open-ended study includes both directions. Either option shows statistics when you end the session.</p></div>
       <span class="label" id="study-filter-label">Cards to include</span>
       <div class="study-filters" id="study-filters" role="group" aria-labelledby="study-filter-label" aria-describedby="study-filter-help">
         ${categories.map(([category,label])=>{
@@ -2044,22 +2083,38 @@ STUDY MATERIAL
           return `<button type="button" class="btn study-filter" data-action="study-filter" data-category="${category}" data-count="${count}" aria-pressed="${category==='all'}" aria-label="${label}, ${count} ${count===1?'prompt':'prompts'}"><span>${label}</span><span class="study-filter-count">${count}</span></button>`;
         }).join('')}
       </div>
-      <p class="help" id="study-filter-help">All includes cards you haven't labeled. Easy and Hard use each card's latest label. Both directions count as separate prompts.</p>
+      <p class="help" id="study-filter-help">All includes cards you haven't labeled. Easy and Hard use each card's latest label. In open-ended study, both directions count as separate prompts.</p>
       <p class="help" id="study-selection-count" role="status" aria-live="polite"></p>
       <div class="checkbox-list"><label class="check-label"><input type="checkbox" id="study-typed">Type my answer before revealing</label></div>
       <p class="help">Easy and Hard are optional labels for future study filters. They never change the current session's order or move you to the next card.</p>`,
     btn('Cancel','close-dialog')+btn('Start studying','dialog-confirm','','primary','book'),() => {
-      const typed=$('#study-typed').checked, filter=$('#study-filters [aria-pressed="true"]').dataset.category;
-      const prompts=pool.filter(p=>filter==='all'||groupByPrompt.get(p.id)===filter);
+      const typed=$('#study-typed').checked, filter=$('#study-filters [aria-pressed="true"]').dataset.category, mode=$('#study-duration').value;
+      const scoped=scopedPool(), seen=new Set();
+      const prompts=scoped.filter(p=>filter==='all'||groupByPrompt.get(p.id)===filter).filter(p=>{
+        if(mode!=='once')return true;
+        if(seen.has(p.cardId))return false;
+        seen.add(p.cardId);return true;
+      });
+      if (!scoped.length) throw new Error('Choose at least one stack with cards.');
       if (!prompts.length) throw new Error('No cards have this label yet. Choose All or another filter.');
-      closeDialog(); study={queue:C.shuffle(prompts),pool:[...prompts],filter,typed,revealed:false,hasRevealed:false,response:'',views:1,origin:{...route},name:st?.name || 'Missed cards'}; render();
+      const scopedStackIds=new Set(scoped.map(p=>p.stackId)), selectedStacks=s.stacks.filter(stack=>scopedStackIds.has(stack.id));
+      const name=st?.name || (supplied?'Missed cards':$('#study-scope').value==='all'?s.name:selectedStacks.length===1?selectedStacks[0].name:`${s.name} · ${selectedStacks.length} stacks`);
+      const now=performance.now();
+      closeDialog(); study={queue:C.shuffle(prompts),pool:[...prompts],filter,typed,mode,revealed:false,hasRevealed:false,response:'',views:1,origin:{...route},name,showSource:subjectScope||!!supplied,startedAt:now,cardStartedAt:now,stats:new Map(),labels:new Map(),completed:false,finishing:false}; render();
     });
-    updateStudyFilterCount();
+    if(subjectScope){
+      $('#study-scope').addEventListener('change',updateSelection);
+      $('#study-stack-picker').addEventListener('change',updateSelection);
+    }
+    $('#study-duration').addEventListener('change',updateSelection);
+    updateSelection();
   }
-  function updateStudyFilterCount() {
+  function updateStudyFilterCount(emptyMessage = 'No cards have this label yet. Choose All or another filter.') {
+    if($('#study-scope')?.value==='selected'&&!document.querySelector('[data-study-stack]:checked'))emptyMessage='Choose at least one stack with cards.';
     const selected=[...document.querySelectorAll('#study-filters [aria-pressed="true"]')];
     const count=selected.reduce((sum,button)=>sum+Number(button.dataset.count),0);
-    $('#study-selection-count').textContent=count?`${count} ${count===1?'prompt':'prompts'} selected`:'No cards have this label yet. Choose All or another filter.';
+    const unit=$('#study-duration')?.value==='once'?'card':'prompt';
+    $('#study-selection-count').textContent=count?`${count} ${unit}${count===1?'':'s'} selected`:emptyMessage;
     $('#dialog [data-action="dialog-confirm"]').disabled=count===0;
     $('#dialog-error').textContent='';
   }
@@ -2069,7 +2124,8 @@ STUDY MATERIAL
     $('#content').innerHTML=`
       <div class="session-page">
         <header class="session-top study-session-top">${brand()}<div class="session-context"><strong>${esc(study.name)}</strong>Study · ${{all:'All cards',easy:'Easy cards',hard:'Hard cards'}[study.filter]}</div><div class="actions session-actions">${btn('Full screen','study-fullscreen','type="button" aria-pressed="false"','quiet','expand')}${btn('End session','exit-study','','quiet','close')}</div></header>
-        <div class="progress-meta"><span>Card ${study.views} · ${study.pool.length} ${study.pool.length===1?'prompt':'prompts'} in rotation</span><span>Random order · No finish line</span></div>
+        <div class="progress-meta"><span>${study.mode==='once'?`Card ${study.views} of ${study.pool.length}`:`Card ${study.views} · ${study.pool.length} ${study.pool.length===1?'prompt':'prompts'} in rotation`}</span><span>Random order · ${study.mode==='once'?'One pass':'Open-ended'}</span></div>
+        ${study.showSource?`<p class="study-source">From stack: ${esc(p.stack)}</p>`:''}
         ${pageError()}
         <div class="error" id="study-fullscreen-error" role="alert"></div>
         <article class="flashcard ${study.revealed?'revealed':study.hasRevealed?'flipped-back':''}">
@@ -2086,11 +2142,11 @@ STUDY MATERIAL
           ${study.revealed&&study.typed?comparison(study.response,p.answer):''}
           <div class="study-navigation">
             ${btn(study.revealed?'Flip back':'Reveal answer','reveal','aria-controls="study-card-face"',study.revealed?'':'primary','flip')}
-            ${btn('Next card','study-next','title="Continue without changing this card\'s label"','','arrow')}
+            ${btn(study.mode==='once'&&study.queue.length===1?'Finish & see statistics':'Next card','study-next','title="Continue without changing this card\'s label"','','arrow')}
           </div>
           ${study.revealed?`<p class="help" id="study-rating-status" role="status" aria-live="polite">${rating?`Current label: ${rating==='easy'?'Easy':'Hard'}.`:'Not labeled yet.'}</p>`:''}
         </div>
-        <p class="keyboard-hint">Click the card or press Space to flip either way.<br>Use Full screen to hide browser controls. Press Esc or choose Exit full screen to return without ending your session.<br>Easy and Hard only label cards for future sessions. Keep flipping until you choose End session.</p>
+        <p class="keyboard-hint">Click the card or press Space to flip either way.<br>Use Full screen to hide browser controls. Press Esc or choose Exit full screen to return without ending your session.<br>Easy and Hard only label cards for future sessions. ${study.mode==='once'?'Finish after the last card, or end early to see your statistics.':'Keep flipping until you choose End session to see your statistics.'}</p>
       </div>`;
     updateStudyFullscreen();
   }
@@ -2125,23 +2181,64 @@ STUDY MATERIAL
     return `<p class="diff-status">${equal?'Text matches. Decide how confidently you recalled it.':'Text differs. Equivalent scientific wording may still be correct; you decide.'}</p><div class="answer-comparison"><div><strong>YOU WROTE</strong>${diff||'<span class="muted">No answer entered</span>'}</div><div><strong>CARD ANSWER</strong>${esc(answer)}</div></div>`;
   }
   function rate(rating) {
-    if (!study?.revealed) return;
+    if (!study?.revealed||study.completed||study.finishing) return;
     if (!['easy','hard'].includes(rating)) throw new Error('Choose Easy or Hard to label this card.');
     const cardId=study.queue[0].cardId, current=findCard(cardId);
     if (!current) throw new Error('This card is no longer available. End the session and reopen the stack.');
     if (current.reviews.at(-1)?.rating!==rating) {
       commit(next => { const card=next.subjects.flatMap(s=>s.stacks).flatMap(st=>st.cards).find(c=>c.id===cardId); card.reviews.push({at:new Date().toISOString(),rating}); card.reviews=card.reviews.slice(-30); });
     }
+    study.labels.set(cardId,rating);
     document.querySelectorAll('.rating-buttons [data-rating]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.rating===rating)));
     $('#study-rating-status').textContent=`Saved as ${rating==='easy'?'Easy':'Hard'} for future study filters.`;
   }
-  function advanceStudy() {
-    if (!study) return;
+  function recordStudyVisit(now) {
+    const p=study.queue[0], previous=study.stats.get(p.cardId);
+    const stat=previous||{cardId:p.cardId,question:p.question,stack:p.stack,visits:0,durationMs:0};
+    stat.visits++;
+    stat.durationMs+=Math.max(0,now-study.cardStartedAt);
+    study.stats.set(p.cardId,stat);
+  }
+  function studyTime(ms) {
+    const seconds=Math.round(ms/1000);
+    if(seconds<60)return `${seconds}s`;
+    const minutes=Math.floor(seconds/60);
+    return minutes<60?`${minutes}m ${seconds%60}s`:`${Math.floor(minutes/60)}h ${minutes%60}m ${seconds%60}s`;
+  }
+  async function finishStudy() {
+    if(!study||study.completed||study.finishing)return;
+    study.finishing=true;
+    const now=performance.now();
+    try{
+      await setStudyFullscreen(false);
+      recordStudyVisit(now);
+      study.durationMs=Math.max(0,now-study.startedAt);
+      study.completed=true;
+      render();window.scrollTo({top:0});$('#content h1')?.focus({preventScroll:true});
+    }finally{study.finishing=false;}
+  }
+  function renderStudySummary() {
+    const stats=[...study.stats.values()], easy=stats.filter(stat=>study.labels.get(stat.cardId)==='easy').length, hard=stats.filter(stat=>study.labels.get(stat.cardId)==='hard').length;
+    const totalCards=new Set(study.pool.map(p=>p.cardId)).size, visits=stats.reduce((sum,stat)=>sum+stat.visits,0);
+    $('#content').innerHTML=`<div class="session-page">${heading('Your study summary',`${esc(study.name)} · ${study.mode==='once'?'One pass':'Open-ended'} study`,btn('Back to workspace','study-summary-back','','primary','back'))}${pageError()}
+      <p>${stats.length===totalCards?'You saw every selected card.':`You saw ${stats.length} of ${totalCards} selected cards.`} ${visits} ${visits===1?'visit':'visits'} in this session.</p>
+      <dl class="study-totals"><div><dt>Total duration</dt><dd>${studyTime(study.durationMs)}</dd></div><div><dt>Marked Easy</dt><dd>${easy} ${easy===1?'card':'cards'}</dd></div><div><dt>Marked Hard</dt><dd>${hard} ${hard===1?'card':'cards'}</dd></div><div><dt>Not marked this session</dt><dd>${stats.length-easy-hard} cards</dd></div></dl>
+      <p class="help">Counts use the last label you chose for each card during this session, not labels from earlier sessions. Time includes reading, typing, revealing, and time away from this tab. Both directions and repeat visits are combined per card. This summary is available until you leave or reload; card labels remain saved.</p>
+      <div class="section-head"><h2>Time with each card</h2><span class="small muted">${stats.length} ${stats.length===1?'card':'cards'} seen</span></div>
+      ${stats.map(stat=>`<article class="study-stat-row"><div><h3>${esc(stat.question)}</h3><p>${esc(stat.stack)} · ${study.labels.has(stat.cardId)?`Marked ${difficultyName(study.labels.get(stat.cardId))}`:'Not marked this session'}</p></div><div class="study-stat-time"><strong>${studyTime(stat.durationMs/stat.visits)}${stat.visits>1?' avg / visit':''}</strong><p>${stat.visits} ${stat.visits===1?'visit':'visits'} · ${studyTime(stat.durationMs)} total</p></div></article>`).join('')}
+      </div>`;
+  }
+  async function advanceStudy() {
+    if (!study||study.completed||study.finishing) return;
+    if(study.mode==='once'&&study.queue.length===1){await finishStudy();return;}
+    const now=performance.now();
+    recordStudyVisit(now);
     const p=study.queue[0];
     study.queue.shift();
     if (!study.queue.length) study.queue=C.shuffle(study.pool);
     if (study.queue[0]?.cardId===p.cardId) { const different=study.queue.findIndex(q=>q.cardId!==p.cardId); if (different>0) study.queue.unshift(study.queue.splice(different,1)[0]); }
     study.views++;
+    study.cardStartedAt=now;
     study.revealed=false; study.hasRevealed=false; study.response=''; renderStudy(); $('#content h1')?.focus({preventScroll:true});
   }
   function attemptDate(attempt) { return attempt.completedAt || attempt.updatedAt || attempt.startedAt; }
@@ -2539,11 +2636,12 @@ STUDY MATERIAL
     'dialog-confirm':async()=>{if(dialogHandler)await dialogHandler();},
     'study-setup':b=>studySetup(b.dataset.id),
     'study-filter':b=>{document.querySelectorAll('#study-filters button').forEach(button=>button.setAttribute('aria-pressed',String(button===b)));updateStudyFilterCount();},
-    reveal:()=>{if(!study)return;if(!study.revealed)study.response=$('#study-response')?.value??study.response;study.revealed=!study.revealed;if(study.revealed)study.hasRevealed=true;renderStudy();$('#content h1')?.focus({preventScroll:true});},
+    reveal:()=>{if(!study||study.completed||study.finishing)return;if(!study.revealed)study.response=$('#study-response')?.value??study.response;study.revealed=!study.revealed;if(study.revealed)study.hasRevealed=true;renderStudy();$('#content h1')?.focus({preventScroll:true});},
     rate:b=>rate(b.dataset.rating),
     'study-next':()=>advanceStudy(),
     'study-fullscreen':async()=>{const target=$('#study-fullscreen-error');target.textContent='';try{await setStudyFullscreen(document.fullscreenElement!==document.documentElement);}catch(error){report(error,target);}},
-    'exit-study':()=>confirmAction('End this study session?','Your Easy and Hard labels are saved for next time.','End session',async()=>{await setStudyFullscreen(false);const origin=study.origin;study=null;go(origin);}),
+    'exit-study':()=>{if(!study||study.completed||study.finishing)return;confirmAction('End this study session?','Your Easy and Hard labels are saved for next time. See your session statistics next.','End & see statistics',finishStudy);},
+    'study-summary-back':()=>{const origin=study.origin;study=null;go(origin);},
     'test-setup':b=>{testPlan=null;go({page:'test-setup',subjectId:b.dataset.subject||route.subjectId,stackId:b.dataset.stack||undefined});},
     'question-generation':b=>go({page:'question-generation',subjectId:b.dataset.subject||route.subjectId,stackId:b.dataset.stack||undefined}),
     'testing-tab':b=>{const selected=b.dataset.tab;if(!['active','catalogue','completed'].includes(selected))return;route.testingTab=selected;document.querySelectorAll('[role="tab"][data-tab]').forEach(tab=>{const active=tab.dataset.tab===selected;tab.setAttribute('aria-selected',String(active));tab.tabIndex=active?0:-1;});document.querySelectorAll('[role="tabpanel"][id^="testing-panel-"]').forEach(panel=>panel.hidden=panel.id!==`testing-panel-${selected}`);b.focus();},
@@ -2635,13 +2733,13 @@ STUDY MATERIAL
       return;
     }
     if($('#dialog').open||event.target.closest('input,textarea,select,[contenteditable],a,button')||event.repeat||event.ctrlKey||event.metaKey||event.altKey)return;
-    if(study){if(event.code==='Space'){event.preventDefault();actions.reveal();}else if(study.revealed&&['1','2'].includes(event.key)){event.preventDefault();try{rate({1:'easy',2:'hard'}[event.key]);}catch(error){report(error);}}}
+    if(study&&!study.completed&&!study.finishing){if(event.code==='Space'){event.preventDefault();actions.reveal();}else if(study.revealed&&['1','2'].includes(event.key)){event.preventDefault();try{rate({1:'easy',2:'hard'}[event.key]);}catch(error){report(error);}}}
   });
   $('#dialog').addEventListener('cancel',event=>{event.preventDefault();closeDialog();});
   for (const type of ['dragover','drop']) window.addEventListener(type,event=>{if(!event.target?.closest?.('#stack-drop'))event.preventDefault();});
   document.addEventListener('fullscreenchange',()=>{$('#study-fullscreen-error')?.replaceChildren();updateStudyFullscreen();});
   document.addEventListener('visibilitychange',updateShoreMotion);
-  window.addEventListener('beforeunload',event=>{if(draft?.dirty||study||activeGeneration){event.preventDefault();event.returnValue='';}});
+  window.addEventListener('beforeunload',event=>{if(draft?.dirty||(study&&!study.completed)||activeGeneration){event.preventDefault();event.returnValue='';}});
   window.addEventListener('storage',event=>{
     if(event.key===C.STORAGE_KEY||event.key===null)notify('Your journal changed in another tab. Export your work and reload before continuing to avoid overwriting changes.');
     if(event.key===C.API_KEY_STORAGE_KEY||event.key===null){

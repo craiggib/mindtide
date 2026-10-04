@@ -27,6 +27,8 @@ MindTide runs as a standalone HTML file in a modern browser without installation
 - Subjects contain stacks; stacks contain Standard or Hidden Pearl flashcards.
 - A single stack can be shared as a portable `.mt` file named after the stack and the export date, and added to any subject by drop target or file picker.
 - Study sessions support free recall and optional Easy/Hard card labels.
+- Learners can study a single stack, an entire subject, or selected stacks within one subject in a single shuffled session, with optional typed answers and Easy/Hard filters. Combined sessions show each prompt's source stack; labels remain attached to the original card.
+- Study length can be open-ended (including both directions) or one pass (each selected card once, using its front prompt). Finishing or ending early shows a session-only summary of labels chosen during that session, visits and average elapsed time per card, and total elapsed duration, including time away from the tab. Labels persist; summaries do not survive navigation or reload.
 - Testing owns a catalogue of separately generated Easy and Hard questions.
 - Test creation is offline and uses only catalogue entries already saved locally.
 - Multiple test attempts may remain incomplete, auto-save every answer, and resume after the browser closes.

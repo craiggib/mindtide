@@ -171,6 +171,25 @@ assert.equal(pending.correct, null);
 assert.equal(pending.questions[0].selected, null);
 
 const prompt = core.prompts(migrated.subjects[0])[0];
+const studySubject = {
+  id: 'study-subject',
+  name: 'Science',
+  stacks: [
+    { ...sharedStack('stack-a', 'Basics', 'card-a'), cards: [{ ...migrated.subjects[0].stacks[0].cards[0], id: 'card-a', reverse: true }] },
+    sharedStack('stack-b', 'Details', 'card-b'),
+    { id: 'stack-empty', name: 'Empty', cards: [] }
+  ]
+};
+function sharedStack(id, name, cardId) {
+  return { id, name, cards: [{ ...migrated.subjects[0].stacks[0].cards[0], id: cardId }] };
+}
+assert.deepEqual(core.prompts(studySubject).map(p => p.id), ['card-a:forward', 'card-a:reverse', 'card-b:forward']);
+assert.deepEqual(core.prompts(studySubject, ['stack-b']).map(p => p.id), ['card-b:forward']);
+assert.deepEqual(core.prompts(studySubject, ['stack-a', 'stack-b', 'stack-a']).map(p => p.id), ['card-a:forward', 'card-a:reverse', 'card-b:forward']);
+assert.deepEqual(core.prompts(studySubject, []).map(p => p.id), []);
+assert.deepEqual(core.prompts(studySubject, ['stack-empty']).map(p => p.id), []);
+assert.deepEqual(core.prompts(studySubject, 'stack-a').map(p => p.direction), ['forward', 'reverse']);
+assert.equal(core.prompts(studySubject, ['stack-b'])[0].stack, 'Details');
 const shallowKey = await core.cacheKey(prompt, 'shallow', migrated.settings.model);
 migrated.cache[shallowKey] = {
   key: shallowKey,
